@@ -1,4 +1,4 @@
-# Azure AI Model MCP Server
+# Azure Foundry MCP Server
 
 This MCP (Model Context Protocol) server integrates with Azure OpenAI services to interact with models.
 
