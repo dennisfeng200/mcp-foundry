@@ -11,6 +11,7 @@ import subprocess
 import httpx
 from jinja2.sandbox import SandboxedEnvironment
 import re
+import contextlib
 
 # Azure Imports
 from azure.identity import DefaultAzureCredential
@@ -60,6 +61,22 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 logger = logging.getLogger("azure_ai_foundry_mcp")
+
+# Configure PromptFlow logging to go to stderr
+def configure_promptflow_logging():
+    import logging
+    promptflow_logger = logging.getLogger('promptflow')
+    for handler in promptflow_logger.handlers:
+        promptflow_logger.removeHandler(handler)
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    promptflow_logger.addHandler(handler)
+    promptflow_logger.propagate = False  # Don't propagate to root logger
+
+# Call this function early in your script's execution
+configure_promptflow_logging()
 
 # Load environment variables
 load_dotenv()
@@ -452,134 +469,148 @@ def get_agent_evaluator_requirements(evaluator_name: str = None) -> Dict:
     else:
         return agent_evaluator_requirements
 
-# In run_text_eval function, modify to include Azure AI project info and return metrics/studio URL
-from datetime import datetime
-
 @mcp.tool()
 def run_text_eval(
-    evaluator_name: str,
-    content: str,  # JSONL content as a string
+    evaluator_names: Union[str, List[str]],  # Single evaluator name or list of evaluator names
+    file_path: Optional[str] = None,  # Path to JSONL file 
+    content: Optional[str] = None,  # JSONL content as a string (optional)
     include_studio_url: bool = True,  # Option to include studio URL in response
     return_row_results: bool = False  # Option to include detailed row results
 ) -> Dict:
     """
-    Run text evaluation using JSONL content in the format expected by the evaluator.
+    Run one or multiple evaluators on a JSONL file or content string.
     
     Parameters:
-    - evaluator_name: Name of the text evaluator to use
-    - content: JSONL content as a string with the proper format for evaluator
+    - evaluator_names: Either a single evaluator name (string) or a list of evaluator names
+    - file_path: Path to a JSONL file to evaluate (preferred for efficiency)
+    - content: JSONL content as a string (alternative if file_path not available)
     - include_studio_url: Whether to include the Azure AI studio URL in the response
-    - return_row_results: Whether to include individual row results (False by default for large datasets)
+    - return_row_results: Whether to include detailed row results (False by default for large datasets)
     """
-    if not evaluation_initialized:
-        return {"error": "Evaluation not initialized. Check environment variables."}
-        
-    if evaluator_name not in text_evaluator_map:
-        raise ValueError(f"Unknown evaluator {evaluator_name}")
+    # Save original stdout so we can restore it later
+    original_stdout = sys.stdout
+    # Redirect stdout to stderr to prevent PromptFlow output from breaking MCP
+    sys.stdout = sys.stderr
     
     try:
-        # Sanitize content - ensure it's valid UTF-8 and handle special characters
-        # Replace any problematic characters with their Unicode equivalents
-        content = content.encode('utf-8', errors='replace').decode('utf-8')
+        if not evaluation_initialized:
+            return {"error": "Evaluation not initialized. Check environment variables."}
         
-        # Count number of rows (for logging only)
-        row_count = content.count('\n') + (0 if content.endswith('\n') else 1)
-        logger.info(f"Processing {row_count} rows for {evaluator_name} evaluation")
+        # Validate inputs
+        if content is None and file_path is None:
+            return {"error": "Either file_path or content must be provided"}
         
-        # Save the content to a temporary file
-        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', suffix='.jsonl', delete=False) as temp_file:
-            temp_filename = temp_file.name
-            temp_file.write(content)
-            temp_file.flush()  # Ensure all data is written to disk
+        # Convert single evaluator to list for unified processing
+        if isinstance(evaluator_names, str):
+            evaluator_names = [evaluator_names]
         
-        # Create evaluator instance
-        evaluator = create_text_evaluator(evaluator_name)
+        # Validate evaluator names
+        for name in evaluator_names:
+            if name not in text_evaluator_map:
+                return {"error": f"Unknown evaluator: {name}"}
         
-        # Set up column mapping based on evaluator requirements
-        requirements = text_evaluator_requirements[evaluator_name]
-        column_mapping = {field: f"${{data.{field}}}" for field in requirements.keys()}
+        # Variable to track if we need to clean up a temp file
+        temp_file = None
         
-        # Prepare evaluation args
-        eval_args = {
-            "data": temp_filename,
-            "evaluation_name": f"{evaluator_name} evaluation - {row_count} rows",
-            "evaluators": {evaluator_name: evaluator},
-            "evaluator_config": {
-                evaluator_name: {
+        try:
+            # Determine which input to use (prioritize file_path for efficiency)
+            input_file = None
+            if file_path:
+                # Resolve file path
+                if os.path.isfile(file_path):
+                    input_file = file_path
+                else:
+                    # Check in data directory
+                    data_dir = os.environ.get("EVAL_DATA_DIR", ".")
+                    alternate_path = os.path.join(data_dir, file_path)
+                    if os.path.isfile(alternate_path):
+                        input_file = alternate_path
+                    else:
+                        return {"error": f"File not found: {file_path} (also checked in {data_dir})"}
+                    
+                # Count rows quickly using file iteration
+                with open(input_file, 'r', encoding='utf-8') as f:
+                    row_count = sum(1 for line in f if line.strip())
+                    
+            elif content:
+                # Create temporary file for content string
+                fd, temp_file = tempfile.mkstemp(suffix='.jsonl')
+                os.close(fd)
+                
+                # Write content to temp file
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                    
+                input_file = temp_file
+                row_count = content.count('\n') + (0 if content.endswith('\n') else 1)
+                
+            logger.info(f"Processing {row_count} rows for {len(evaluator_names)} evaluator(s)")
+            
+            # Prepare evaluators
+            evaluators = {}
+            eval_config = {}
+            
+            for name in evaluator_names:
+                # Create evaluator instance
+                evaluators[name] = create_text_evaluator(name)
+                
+                # Set up column mapping for this evaluator
+                requirements = text_evaluator_requirements[name]
+                column_mapping = {}
+                for field, requirement in requirements.items():
+                    if requirement == "Required":
+                        column_mapping[field] = f"${{data.{field}}}"                
+                eval_config[name] = {
                     "column_mapping": column_mapping
                 }
-            }
-        }
-        
-        # Add Azure AI project info if initialized
-        if azure_ai_project and include_studio_url:
-            eval_args["azure_ai_project"] = azure_ai_project
-        
-        # Run evaluation
-        result = evaluate(**eval_args)
-        
-        # Prepare response
-        response = {
-            "evaluator": evaluator_name,
-            "row_count": row_count,
-            "metrics": result.get("metrics", {})
-        }
-        
-        # Only include detailed row results if explicitly requested
-        if return_row_results:
-            response["row_results"] = result.get("rows", [])
-        else:
-            # Calculate summary statistics for large datasets
-            if row_count > 10:
-                # Count passes/fails if applicable
-                rows = result.get("rows", [])
-                if rows and evaluator_name in rows[0].get("outputs", {}):
-                    result_field = f"outputs.{evaluator_name}.{evaluator_name}_result"
-                    pass_count = sum(1 for row in rows if get_nested_field(row, result_field) == "pass")
-                    fail_count = sum(1 for row in rows if get_nested_field(row, result_field) == "fail")
-                    
-                    if pass_count + fail_count > 0:
-                        response["summary"] = {
-                            "pass_count": pass_count,
-                            "fail_count": fail_count,
-                            "pass_rate": pass_count / (pass_count + fail_count) if (pass_count + fail_count) > 0 else 0
-                        }
-        
-        # Include studio URL if available
-        if include_studio_url and "studio_url" in result:
-            response["studio_url"] = result.get("studio_url")
             
-        return response
-    
-    except Exception as e:
-        logger.error(f"Evaluation error: {str(e)}")
-        # For encoding errors, try to provide more helpful information
-        if isinstance(e, UnicodeError):
-            return {
-                "error": f"Unicode encoding error: {str(e)}. Try removing special characters or non-UTF8 content.",
-                "error_type": "encoding_error"
+            # Prepare evaluation args
+            eval_args = {
+                "data": input_file,
+                "evaluators": evaluators,
+                "evaluator_config": eval_config
             }
-        return {"error": str(e)}
+            
+            # Add Azure AI project info if initialized
+            if azure_ai_project and include_studio_url:
+                eval_args["azure_ai_project"] = azure_ai_project
+            
+            # Run evaluation with additional stdout redirection for extra safety
+            with contextlib.redirect_stdout(sys.stderr):
+                result = evaluate(**eval_args)
+            
+            # Prepare response
+            response = {
+                "evaluators": evaluator_names,
+                "row_count": row_count,
+                "metrics": result.get("metrics", {})
+            }
+            
+            # Only include detailed row results if explicitly requested
+            if return_row_results:
+                response["row_results"] = result.get("rows", [])
+            
+            # Include studio URL if available
+            if include_studio_url and "studio_url" in result:
+                response["studio_url"] = result.get("studio_url")
+                
+            return response
+        
+        except Exception as e:
+            logger.error(f"Evaluation error: {str(e)}")
+            return {"error": str(e)}
+        
+        finally:
+            # Clean up temp file if we created one
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except Exception:
+                    pass
     
     finally:
-        # Clean up temp file
-        try:
-            if 'temp_filename' in locals() and os.path.exists(temp_filename):
-                os.remove(temp_filename)
-        except Exception as e:
-            logger.error(f"Error removing temporary file: {str(e)}")
-
-# Helper function to safely get nested field values
-def get_nested_field(obj, field_path):
-    """Get a value from a nested dictionary using dot notation."""
-    parts = field_path.split('.')
-    current = obj
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return None
-    return current
+        # Always restore stdout, even if an exception occurs
+        sys.stdout = original_stdout
 
 # Similarly, update the agent_query_and_evaluate function to include studio URL
 @mcp.tool()
