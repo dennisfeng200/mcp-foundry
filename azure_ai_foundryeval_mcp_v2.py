@@ -1284,7 +1284,7 @@ async def get_code_sample_for_deployment(
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    # Initialize agent client in the background
+    # Initialize agent client in the back
     if agent_initialized:
         asyncio.get_event_loop().run_until_complete(initialize_agent_client())
     
