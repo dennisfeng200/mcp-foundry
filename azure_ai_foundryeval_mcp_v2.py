@@ -453,11 +453,14 @@ def get_agent_evaluator_requirements(evaluator_name: str = None) -> Dict:
         return agent_evaluator_requirements
 
 # In run_text_eval function, modify to include Azure AI project info and return metrics/studio URL
+from datetime import datetime
+
 @mcp.tool()
 def run_text_eval(
     evaluator_name: str,
     content: str,  # JSONL content as a string
-    include_studio_url: bool = True  # Option to include studio URL in response
+    include_studio_url: bool = True,  # Option to include studio URL in response
+    return_row_results: bool = False  # Option to include detailed row results
 ) -> Dict:
     """
     Run text evaluation using JSONL content in the format expected by the evaluator.
@@ -466,6 +469,7 @@ def run_text_eval(
     - evaluator_name: Name of the text evaluator to use
     - content: JSONL content as a string with the proper format for evaluator
     - include_studio_url: Whether to include the Azure AI studio URL in the response
+    - return_row_results: Whether to include individual row results (False by default for large datasets)
     """
     if not evaluation_initialized:
         return {"error": "Evaluation not initialized. Check environment variables."}
@@ -473,12 +477,21 @@ def run_text_eval(
     if evaluator_name not in text_evaluator_map:
         raise ValueError(f"Unknown evaluator {evaluator_name}")
     
-    # Save the content to a temporary file
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.jsonl', delete=False) as temp_file:
-        temp_filename = temp_file.name
-        temp_file.write(content)
-    
     try:
+        # Sanitize content - ensure it's valid UTF-8 and handle special characters
+        # Replace any problematic characters with their Unicode equivalents
+        content = content.encode('utf-8', errors='replace').decode('utf-8')
+        
+        # Count number of rows (for logging only)
+        row_count = content.count('\n') + (0 if content.endswith('\n') else 1)
+        logger.info(f"Processing {row_count} rows for {evaluator_name} evaluation")
+        
+        # Save the content to a temporary file
+        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', suffix='.jsonl', delete=False) as temp_file:
+            temp_filename = temp_file.name
+            temp_file.write(content)
+            temp_file.flush()  # Ensure all data is written to disk
+        
         # Create evaluator instance
         evaluator = create_text_evaluator(evaluator_name)
         
@@ -489,7 +502,7 @@ def run_text_eval(
         # Prepare evaluation args
         eval_args = {
             "data": temp_filename,
-            "evaluation_name": f"{evaluator_name} evaluation - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "evaluation_name": f"{evaluator_name} evaluation - {row_count} rows",
             "evaluators": {evaluator_name: evaluator},
             "evaluator_config": {
                 evaluator_name: {
@@ -508,9 +521,29 @@ def run_text_eval(
         # Prepare response
         response = {
             "evaluator": evaluator_name,
-            "metrics": result.get("metrics", {}),
-            "row_results": result.get("rows", [])
+            "row_count": row_count,
+            "metrics": result.get("metrics", {})
         }
+        
+        # Only include detailed row results if explicitly requested
+        if return_row_results:
+            response["row_results"] = result.get("rows", [])
+        else:
+            # Calculate summary statistics for large datasets
+            if row_count > 10:
+                # Count passes/fails if applicable
+                rows = result.get("rows", [])
+                if rows and evaluator_name in rows[0].get("outputs", {}):
+                    result_field = f"outputs.{evaluator_name}.{evaluator_name}_result"
+                    pass_count = sum(1 for row in rows if get_nested_field(row, result_field) == "pass")
+                    fail_count = sum(1 for row in rows if get_nested_field(row, result_field) == "fail")
+                    
+                    if pass_count + fail_count > 0:
+                        response["summary"] = {
+                            "pass_count": pass_count,
+                            "fail_count": fail_count,
+                            "pass_rate": pass_count / (pass_count + fail_count) if (pass_count + fail_count) > 0 else 0
+                        }
         
         # Include studio URL if available
         if include_studio_url and "studio_url" in result:
@@ -520,12 +553,33 @@ def run_text_eval(
     
     except Exception as e:
         logger.error(f"Evaluation error: {str(e)}")
+        # For encoding errors, try to provide more helpful information
+        if isinstance(e, UnicodeError):
+            return {
+                "error": f"Unicode encoding error: {str(e)}. Try removing special characters or non-UTF8 content.",
+                "error_type": "encoding_error"
+            }
         return {"error": str(e)}
     
     finally:
         # Clean up temp file
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        try:
+            if 'temp_filename' in locals() and os.path.exists(temp_filename):
+                os.remove(temp_filename)
+        except Exception as e:
+            logger.error(f"Error removing temporary file: {str(e)}")
+
+# Helper function to safely get nested field values
+def get_nested_field(obj, field_path):
+    """Get a value from a nested dictionary using dot notation."""
+    parts = field_path.split('.')
+    current = obj
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+    return current
 
 # Similarly, update the agent_query_and_evaluate function to include studio URL
 @mcp.tool()
