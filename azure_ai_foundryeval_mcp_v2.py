@@ -492,12 +492,34 @@ def run_text_eval(
     # Redirect stdout to stderr to prevent PromptFlow output from breaking MCP
     sys.stdout = sys.stderr
     
+    # Heartbeat mechanism
+    import threading
+    import time
+
+    # Set up a heartbeat mechanism to keep the connection alive
+    heartbeat_active = True
+
+    def send_heartbeats():
+        count = 0
+        while heartbeat_active:
+            count += 1
+            logger.info(f"Heartbeat {count} - Evaluation in progress...")
+            # Print to stderr to keep connection alive
+            print(f"Evaluation in progress... ({count * 15}s)", file=sys.stderr, flush=True)
+            time.sleep(15)  # Send heartbeat every 15 seconds
+
+    # Start heartbeat thread
+    heartbeat_thread = threading.Thread(target=send_heartbeats, daemon=True)
+    heartbeat_thread.start()
+    
     try:
         if not evaluation_initialized:
+            heartbeat_active = False  # Stop heartbeat
             return {"error": "Evaluation not initialized. Check environment variables."}
         
         # Validate inputs
         if content is None and file_path is None:
+            heartbeat_active = False  # Stop heartbeat
             return {"error": "Either file_path or content must be provided"}
         
         # Convert single evaluator to list for unified processing
@@ -507,6 +529,7 @@ def run_text_eval(
         # Validate evaluator names
         for name in evaluator_names:
             if name not in text_evaluator_map:
+                heartbeat_active = False  # Stop heartbeat
                 return {"error": f"Unknown evaluator: {name}"}
         
         # Variable to track if we need to clean up a temp file
@@ -526,6 +549,7 @@ def run_text_eval(
                     if os.path.isfile(alternate_path):
                         input_file = alternate_path
                     else:
+                        heartbeat_active = False  # Stop heartbeat
                         return {"error": f"File not found: {file_path} (also checked in {data_dir})"}
                     
                 # Count rows quickly using file iteration
@@ -593,11 +617,12 @@ def run_text_eval(
             # Include studio URL if available
             if include_studio_url and "studio_url" in result:
                 response["studio_url"] = result.get("studio_url")
-                
+            heartbeat_active = False  # Stop heartbeat    
             return response
         
         except Exception as e:
             logger.error(f"Evaluation error: {str(e)}")
+            heartbeat_active = False  # Stop heartbeat
             return {"error": str(e)}
         
         finally:
@@ -607,10 +632,14 @@ def run_text_eval(
                     os.remove(temp_file)
                 except Exception:
                     pass
+                
+            # Make sure heartbeat is stopped
+            heartbeat_active = False
     
     finally:
         # Always restore stdout, even if an exception occurs
         sys.stdout = original_stdout
+        heartbeat_active = False
 
 # Similarly, update the agent_query_and_evaluate function to include studio URL
 @mcp.tool()
