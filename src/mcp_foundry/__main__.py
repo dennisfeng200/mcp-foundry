@@ -35,7 +35,9 @@ labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsite
 
 
 @mcp.tool()
-async def list_models_from_model_catalog(ctx: Context, search_for_free_playground: bool = False, publisher_name = "", license_name = "") -> str:
+async def list_models_from_model_catalog(
+    ctx: Context, search_for_free_playground: bool = False, publisher_name="", license_name=""
+) -> str:
     """
     Retrieves a list of supported models from the Azure AI Foundry catalog.
 
@@ -54,7 +56,7 @@ async def list_models_from_model_catalog(ctx: Context, search_for_free_playgroun
             only models with this license will be returned. Defaults to an empty string, meaning no filter is applied.
 
     Returns:
-        str: A JSON-encoded string containing the list of models and their metadata. The list will include 
+        str: A JSON-encoded string containing the list of models and their metadata. The list will include
              model names, inference model names, summaries, and the total count of models retrieved.
 
     Usage:
@@ -76,6 +78,7 @@ async def list_models_from_model_catalog(ctx: Context, search_for_free_playgroun
     models_list = get_models_list(ctx, search_for_free_playground, publisher_name, license_name, max_pages)
 
     return models_list.json()
+
 
 @mcp.tool()
 async def list_azure_ai_foundry_labs_projects(ctx: Context):
@@ -108,8 +111,11 @@ async def list_azure_ai_foundry_labs_projects(ctx: Context):
 
     return project_response["projects"]
 
+
 @mcp.tool()
-def list_deployments_from_azure_ai_services(subscription_id: str, resource_group: str, azure_ai_services_name: str) -> list[dict]:
+def list_deployments_from_azure_ai_services(
+    subscription_id: str, resource_group: str, azure_ai_services_name: str
+) -> list[dict]:
     """
     Retrieves a list of deployments from Azure AI Services.
 
@@ -131,7 +137,11 @@ def list_deployments_from_azure_ai_services(subscription_id: str, resource_group
 
     client = get_cognitiveservices_client(subscription_id)
 
-    return [deployment.as_dict() for deployment in client.deployments.list(resource_group,account_name=azure_ai_services_name)]
+    return [
+        deployment.as_dict()
+        for deployment in client.deployments.list(resource_group, account_name=azure_ai_services_name)
+    ]
+
 
 @mcp.tool()
 async def get_model_details_and_code_samples(model_name: str, ctx: Context):
@@ -156,17 +166,12 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
             - variant information, model metadata, and system requirements
 
     Usage:
-        Call this function when you need to retrieve detailed information about a model using its asset ID. 
+        Call this function when you need to retrieve detailed information about a model using its asset ID.
         This is useful when users inquire about a model's features, or when specific metadata about a model is required.
     """
     headers = get_client_headers_info(ctx)
 
-    model_details = {
-        "details": {},
-        "code_sample_azure": None,
-        "code_sample_github": None,
-        "type": None
-    }
+    model_details = {"details": {}, "code_sample_azure": None, "code_sample_github": None, "type": None}
 
     response = requests.get(f"{labs_api_url}/projects?source=afl", headers=headers)
     if response.status_code != 200:
@@ -178,37 +183,55 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
 
     if model_name in project_names:
         model_details["details"] = project_response["projects"][project_names.index(model_name)]
-        model_details["code_sample"] = await get_code_sample_for_labs_model(model_name, ctx)
+        model_details["code_sample_github"] = await get_code_sample_for_labs_model(model_name, ctx)
         model_details["type"] = "Labs"
         return ModelDetails(**model_details)
-    
+
     model_list_details = get_models_list(ctx, model_name=model_name)
     if model_list_details.fetched_models_count == 0:
         return f"Model '{model_name}' not found in the catalog."
-    
-    model_list_details  = model_list_details.summaries[0]
 
-    response = requests.get(f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={model_list_details['assetId']}", headers=headers)
+    model_list_details = model_list_details.summaries[0]
+
+    response = requests.get(
+        f"https://ai.azure.com/api/westus2/modelregistry/v1.0/registry/models?assetIdOrReference={model_list_details['assetId']}",
+        headers=headers,
+    )
     if response.status_code != 200:
         return f"Error fetching model details from API: {response.status_code}"
 
     model_details["details"] = response.json()
 
     # Free playground model add GH guidance to model details
-    if "freePlayground" in model_details['details']['kvTags'] and model_details['details']['kvTags']["freePlayground"] == "true":
+    if (
+        "freePlayground" in model_details["details"]["kvTags"]
+        and model_details["details"]["kvTags"]["freePlayground"] == "true"
+    ):
         model_details["type"] = "Free Playground"
-        model_details["code_sample_github"] = await get_code_sample_for_github_model(model_list_details["publisher"], model_list_details["name"], ctx)
+        model_details["code_sample_github"] = await get_code_sample_for_github_model(
+            model_list_details["publisher"], model_list_details["name"], ctx
+        )
 
     # OpenAI model add OpenAI guidance to model details
     if model_list_details["deployment_options"]["openai"]:
         if not model_details["type"] == "Free Playground":
             model_details["type"] = "OpenAI"
-        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"], model_list_details['inferenceTasks'][0], "<your-aoai-endpoint>", "<your-deployment-name>")
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(
+            model_list_details["name"],
+            model_list_details["inferenceTasks"][0],
+            "<your-aoai-endpoint>",
+            "<your-deployment-name>",
+        )
 
     # PayGo model add PayGo guidance to model details
     elif model_list_details["deployment_options"]["serverless_endpoint"]:
         model_details["type"] = "Serverless Endpoint"
-        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(model_list_details["name"],model_list_details['inferenceTasks'][0], "<your-aoai-endpoint>", "<your-deployment-name>")
+        model_details["code_sample_azure"] = get_code_sample_for_deployment_under_ai_services(
+            model_list_details["name"],
+            model_list_details["inferenceTasks"][0],
+            "<your-aoai-endpoint>",
+            "<your-deployment-name>",
+        )
 
     # Managed compute model add managed compute guidance to model details
     elif model_list_details["deployment_options"]["managed_compute"]:
@@ -271,9 +294,7 @@ async def deploy_model_on_ai_services(
         sku = Sku(name=sku_name, capacity=sku_capacity)
 
     if scale_type is not None:
-        scale_settings = DeploymentScaleSettings(
-            scale_type=scale_type, capacity=scale_capacity
-        )
+        scale_settings = DeploymentScaleSettings(scale_type=scale_type, capacity=scale_capacity)
 
     properties = DeploymentProperties(
         model=model,
@@ -305,6 +326,7 @@ def get_model_quotas(subscription_id: str, location: str) -> list[dict]:
 
     client = get_cognitiveservices_client(subscription_id)
     return [usage.as_dict() for usage in client.usages.list(location)]
+
 
 @mcp.tool()
 def create_azure_ai_services_account(
@@ -413,6 +435,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-previ
     # TODO: Use the Python SDK once the update is released
     return deploy_inline_bicep_template(subscription_id, resource_group, bicep_template)
 
+
 @mcp.tool()
 def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
     """
@@ -425,7 +448,7 @@ def get_prototyping_instructions_for_github_and_labs(ctx: Context) -> str:
         - Details about how to configure the environment.
         - How to query the models.
         - Best practices for using Foundry models in prototyping.
-    
+
     Parameters:
         ctx (Context): The context of the current session, which may include session-specific information and metadata that can be used to customize the returned instructions.
 
