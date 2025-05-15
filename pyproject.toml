@@ -1,7 +1,7 @@
 [project]
 name = "mcp-foundry"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP Server for Azure AI Foundry (experimental)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -22,4 +22,4 @@ test = [
 pythonpath = ["src"]
  
 [project.scripts]
-run-azure-foundry-mcp = "mcp_foundry.__main__:main"
+run-azure-ai-foundry-mcp = "mcp_foundry.__main__:main"

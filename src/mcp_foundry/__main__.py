@@ -30,7 +30,7 @@ load_dotenv()
 logger = logging.getLogger("mcp_foundry")
 logging.basicConfig(level=logging.DEBUG)
 
-mcp = FastMCP("azure-ai-foundry-models-mcp-server")
+mcp = FastMCP("azure-ai-foundry-mcp-server")
 labs_api_url = os.environ.get("LABS_API_URL", "https://labs-mcp-api.azurewebsites.net/api/v1")
 
 
