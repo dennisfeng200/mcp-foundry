@@ -9,7 +9,8 @@ dependencies = [
     "requests>=2.32.3",
     "azure-mgmt-cognitiveservices>=13.0",
     "azure-identity>=1.0",
-    "jinja2~=3.0"
+    "jinja2~=3.0",
+    "azure-cli>=2.60.0"
 ]
  
 [dependency-groups]
