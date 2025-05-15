@@ -15,4 +15,4 @@ dependencies = [
 pythonpath = ["src"]
 
 [project.scripts]
-run-azure-foundry-mcp = "mcp_foundry.__main__:main"
+run-azure-ai-foundry-mcp = "mcp_foundry.__main__:main"
