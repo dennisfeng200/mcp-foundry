@@ -300,14 +300,19 @@ def deploy_inline_bicep_template(
     """Deploy a bicep template from a string"""
     with tempfile.NamedTemporaryFile(suffix=".bicep") as tmp:
         Path(tmp.name).write_text(bicep_template, encoding="utf-8")
-        return az(
-            "deployment",
-            "group",
-            "create",
-            "--subscription",
-            subscription_id,
-            "--resource-group",
-            resource_group,
-            "--template-file",
-            tmp.name,
-        )
+        try:
+            return az(
+                "deployment",
+                "group",
+                "create",
+                "--subscription",
+                subscription_id,
+                "--resource-group",
+                resource_group,
+                "--template-file",
+                tmp.name,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.exception(e.stderr + e.stdout)
+            # print(e.output, file=sys.stderr)
+            raise
