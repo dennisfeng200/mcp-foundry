@@ -7,7 +7,7 @@
         "run",
         "--spec",
         "--no-cache",
-        "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
+        "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
         "run-azure-ai-foundry-mcp"
       ]
     }
