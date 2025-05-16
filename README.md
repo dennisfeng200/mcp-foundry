@@ -5,6 +5,7 @@ A Model Context Protocol server for Azure AI Foundry, providing a unified set of
 [![GitHub watchers](https://img.shields.io/github/watchers/azure-ai-foundry/mcp-foundry.svg?style=social&label=Watch)](https://github.com/azure-ai-foundry/mcp-foundry/watchers)
 [![GitHub forks](https://img.shields.io/github/forks/azure-ai-foundry/mcp-foundry.svg?style=social&label=Fork)](https://github.com/azure-ai-foundry/mcp-foundry/fork)
 [![GitHub stars](https://img.shields.io/github/stars/azure-ai-foundry/mcp-foundry?style=social&label=Star)](https://github.com/azure-ai-foundry/mcp-foundry/stargazers)
+
 [![Azure AI Community Discord](https://dcbadge.vercel.app/api/server/ByRwuEEgH4)](https://discord.gg/REmjGvvFpW)
 
 ## Tool Categories
@@ -71,24 +72,24 @@ Follow the appropriate link below for detailed instructions:
 
 ---
 
-#### 3. Add Foundry Labs MCP Entry
+#### 3. Add MCP Entry
 
 Copy and paste the following JSON block into your MCP client’s configuration:
 
 ```json
-"MCP Server For Foundry Labs": {
+"MCP Server For Azure AI Foundry": {
   "command": "pipx",
   "args": [
     "run",
     "--no-cache"
     "--spec",
-    "git+https://github.com/azure-ai-foundry/mcp-foundry.git",
+    "git+https://github.com/azure-ai-foundry/mcp-foundry.git@msbuild2025",
     "run-azure-ai-foundry-mcp"
   ]
 }
 ```
 
-> This will automatically install and run the MCP server for Foundry Labs using `pipx`.
+> This will automatically install and run the MCP server using `pipx`.
 
 ---
 
