@@ -35,6 +35,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mcp_foundry_model")
 
+
 @mcp.tool()
 async def list_models_from_model_catalog(ctx: Context, search_for_free_playground: bool = False, publisher_name = "", license_name = "") -> str:
     """
