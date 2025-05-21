@@ -37,7 +37,7 @@ def invoke_llm_with_tools(
     messages = [
         dict(
             role="user",
-            message=user_message,
+            content=user_message,
         )
     ]
 
