@@ -99,6 +99,8 @@ async def test_mcp_client_message_2():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_mcp_client_message_3():
+    # TODO: Create a more sophisticated tool call verification step that handles the stochosticity.
+    # This is because this pytest sometimes gives different tool calls which is expected of a vague freeform input
     await verify_mcp_tool_call(
         user_message="I want to use the Aurora model from Azure AI Foundry Labs; fetch details on how to implement it.",
         expected_tool_call_name="list_azure_ai_foundry_labs_projects",
