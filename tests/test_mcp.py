@@ -30,13 +30,22 @@ async def test_mcp_client_lists_tools():
             assert tools, "Expected at least one tool from the MCP server"
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_mcp_client_message_1():
-    # In the args, we omit "--no-cache" to reduce latency
+async def verify_mcp_tool_call(user_message: str, expected_tool_call_name: str, no_cache: bool = False):
+    """
+    Helper function to test MCP tool calling functionality with different messages and expected tools.
+
+    Args:
+        user_message: The query to send to the model
+        expected_tool_call_name: The name of the tool we expect the model to call
+        no_cache: Whether to use --no-cache flag when running the MCP server
+    """
+    args = ["run", "--spec", "..", "run-azure-ai-foundry-mcp"]
+    if no_cache:
+        args.insert(1, "--no-cache")
+
     server_params = StdioServerParameters(
         command="pipx",
-        args=["run", "--spec", "..", "run-azure-ai-foundry-mcp"],
+        args=args,
     )
 
     async with stdio_client(server_params) as (stdio, write):
@@ -53,16 +62,44 @@ async def test_mcp_client_message_1():
             )
 
             completion = invoke_llm_with_tools(
-                user_message="Tell me the Azure AI Foundry Labs projects",
+                user_message=user_message,
                 aoai_client=aoai_client,
                 model=os.environ["AOAI_MODEL"],
                 tools=openai_tools,
             )
             response_message = completion.choices[0].message
 
-            # TODO dennis
-            expected_tool_call_name = "list_azure_ai_foundry_labs_projects"
             actual_tool_calls = response_message.tool_calls
-            assert len(actual_tool_calls) > 0
+            assert len(actual_tool_calls) > 0, "Expected at least one tool call but got none"
             assert isinstance(actual_tool_calls[0], ChatCompletionMessageToolCall)
             assert actual_tool_calls[0].function.name == expected_tool_call_name
+
+            return completion
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_mcp_client_message_1():
+    """Test that the model correctly calls list_azure_ai_foundry_labs_projects tool"""
+    await verify_mcp_tool_call(
+        user_message="Tell me the Azure AI Foundry Labs projects",
+        expected_tool_call_name="list_azure_ai_foundry_labs_projects",
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_mcp_client_message_2():
+    await verify_mcp_tool_call(
+        user_message="I want to prototype an app with Azure AI Foundry Labs. Where do I start?",
+        expected_tool_call_name="get_prototyping_instructions_for_github_and_labs",
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_mcp_client_message_3():
+    await verify_mcp_tool_call(
+        user_message="I want to use the Aurora model from Azure AI Foundry Labs; fetch details on how to implement it.",
+        expected_tool_call_name="list_azure_ai_foundry_labs_projects",
+    )
