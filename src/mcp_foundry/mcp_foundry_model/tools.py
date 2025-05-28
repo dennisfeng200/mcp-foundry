@@ -65,7 +65,7 @@ async def list_models_from_model_catalog(ctx: Context, search_for_free_playgroun
         If user didn't specify free playground or ask for models that support GitHub token, always explain that by default it will show the all the models but some of them would support free playground.
         Explain to the user that if they want to find models suitable for prototyping and free to use with support for free playground, they can look for models that supports free playground, or look for models that they can use with GitHub token.
     """
-    max_pages = 5
+    max_pages = 3
     # Note: if max_pages becomes larger, the agent will find it more difficult to "summarize" the result, which may not be desired.
     # max_pages = 10
 
@@ -118,6 +118,8 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
     This function is used when a user requests detailed information about a particular model in the Foundry catalog.
     It fetches the model's metadata, capabilities, descriptions, and other relevant details associated with the given asset ID.
 
+    It is important that you provide the user a link to more information for compliance reasons. Use the link provided.
+
     Parameters:
         model_name (str): The name of the model whose details are to be retrieved. This is a required parameter.
         ctx (Context): The context of the current session, containing metadata about the request and session.
@@ -131,6 +133,7 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
             - publisher information, licensing details, and terms of use
             - model creation and modification times
             - variant information, model metadata, and system requirements
+            - link to more information about the model
 
     Usage:
         Call this function when you need to retrieve detailed information about a model using its asset ID. 
@@ -138,11 +141,13 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
     """
     headers = get_client_headers_info(ctx)
 
+    #TODO: Have link go to actual model card not just generic site
     model_details = {
         "details": {},
         "code_sample_azure": None,
         "code_sample_github": None,
-        "type": None
+        "type": None,
+        "link": "https://ai.azure.com/explore/models"
     }
 
     response = requests.get(f"{labs_api_url}/projects?source=afl", headers=headers)
@@ -157,6 +162,7 @@ async def get_model_details_and_code_samples(model_name: str, ctx: Context):
         model_details["details"] = project_response["projects"][project_names.index(model_name)]
         model_details["code_sample_github"] = await get_code_sample_for_labs_model(model_name, ctx)
         model_details["type"] = "Labs"
+        model_details["link"] = "https://ai.azure.com/labs"
         return ModelDetails(**model_details)
     
     model_list_details = get_models_list(ctx, model_name=model_name)

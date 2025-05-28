@@ -105,14 +105,6 @@ A Model Context Protocol server for Azure AI Foundry, providing a unified set of
 - What does quota for OpenAI models mean on Azure AI Foundry?
 - Get me current quota for my AI services resource.
 
-### Knowledge
-
-Coming soon.
-
-### Evaluation
-
-Coming soon.
-
 ## Quick Start with GitHub Copilot
 
 [![Use The Template](https://img.shields.io/static/v1?style=for-the-badge&label=Use+The+Template&message=GitHub&color=181717&logo=github)](https://github.com/azure-ai-foundry/foundry-models-playground/generate)
