@@ -2620,7 +2620,7 @@ wheels = [
 [[package]]
 name = "mcp-foundry"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "azure-ai-evaluation" },
     { name = "azure-ai-projects" },
@@ -2651,7 +2651,7 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.0" },
     { name = "mcp", specifier = ">=1.8.0" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "tool-usage-evals", git = "https://github.com/dennischenfeng/tool-usage-evals?branch=Feature%2Ffirst" },
+    { name = "tool-usage-evals", specifier = ">=0.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -4299,13 +4299,17 @@ wheels = [
 [[package]]
 name = "tool-usage-evals"
 version = "0.1.0"
-source = { git = "https://github.com/dennischenfeng/tool-usage-evals?branch=Feature%2Ffirst#bd22edfdc0a2ca27bd9925911620bcad849b9e8b" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-identity" },
     { name = "mcp" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/eb/52307358325344969d3b12957df06214ba2b25597f78c872f4eda7552094/tool_usage_evals-0.1.0.tar.gz", hash = "sha256:b808ecbd74c9456580bb9c0a7a4b3ffc7a0ea2ecabf900cfcdabd4a796c776b1", size = 48529, upload-time = "2025-05-28T22:11:35.89Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/2d/ebc363bbbd1b87891c1f44f0947df4e98bdade593eafcc23bc507be873f1/tool_usage_evals-0.1.0-py3-none-any.whl", hash = "sha256:f4b1be40afa2b2f9f7e1114b23176f483a316bf4bfd5bc0c156f6c62ef051840", size = 5394, upload-time = "2025-05-28T22:11:34.354Z" },
 ]
 
 [[package]]
