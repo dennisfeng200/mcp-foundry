@@ -2649,9 +2649,9 @@ requires-dist = [
     { name = "azure-mgmt-cognitiveservices", specifier = ">=13.0.0" },
     { name = "azure-search-documents", specifier = ">=11.5.2" },
     { name = "jinja2", specifier = "~=3.0" },
-    { name = "mcp", specifier = ">=1.8.0" },
+    { name = "mcp", specifier = ">=1.9.1" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "tool-usage-evals", specifier = ">=0.1.0" },
+    { name = "tool-usage-evals", specifier = ">=0.1.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -4298,7 +4298,7 @@ wheels = [
 
 [[package]]
 name = "tool-usage-evals"
-version = "0.1.0"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-identity" },
@@ -4307,9 +4307,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/eb/52307358325344969d3b12957df06214ba2b25597f78c872f4eda7552094/tool_usage_evals-0.1.0.tar.gz", hash = "sha256:b808ecbd74c9456580bb9c0a7a4b3ffc7a0ea2ecabf900cfcdabd4a796c776b1", size = 48529, upload-time = "2025-05-28T22:11:35.89Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/ba/150dfce6eaa2a1167f366fbc91b95ed05f68f3a972e83207b38c3dc81dcc/tool_usage_evals-0.1.1.tar.gz", hash = "sha256:8a666b8252623d9014b3d4f304b7ed512a7a8bf1e4fee22a921c565f799871dd", size = 48669, upload-time = "2025-05-29T01:00:48.58Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/2d/ebc363bbbd1b87891c1f44f0947df4e98bdade593eafcc23bc507be873f1/tool_usage_evals-0.1.0-py3-none-any.whl", hash = "sha256:f4b1be40afa2b2f9f7e1114b23176f483a316bf4bfd5bc0c156f6c62ef051840", size = 5394, upload-time = "2025-05-28T22:11:34.354Z" },
+    { url = "https://files.pythonhosted.org/packages/43/e6/bb7678b08c0d45f78ef9323de2757180dfb11d8eb091690067d6fba100b1/tool_usage_evals-0.1.1-py3-none-any.whl", hash = "sha256:bf1fa5010bc1797e807064e096346d82042ba6a9d0110e81c0a160f5404b508f", size = 5414, upload-time = "2025-05-29T01:00:46.803Z" },
 ]
 
 [[package]]
