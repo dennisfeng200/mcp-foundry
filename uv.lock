@@ -2632,6 +2632,7 @@ dependencies = [
     { name = "mcp" },
     { name = "requests" },
     { name = "tool-usage-evals" },
+    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -2653,6 +2654,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.9.1" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "tool-usage-evals", specifier = ">=0.1.1" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [package.metadata.requires-dev]
