@@ -15,6 +15,21 @@ from openai.types.chat import ChatCompletionMessageToolCall
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
+import openai
+from tenacity import (
+    retry,
+    wait_random_exponential,
+    stop_after_attempt,
+    retry_if_exception_type,
+)
+
+
+retry_decorator = retry(
+    retry=retry_if_exception_type(openai.RateLimitError),
+    wait=wait_random_exponential(min=10, max=90),
+    stop=stop_after_attempt(6),
+    reraise=True,
+)
 
 load_dotenv()
 MCP_SERVER_SCRIPT = Path(__file__).parent / "../src/mcp_foundry/__main__.py"
@@ -134,7 +149,47 @@ async def test_mcp_client_message_10(aoai_client) -> None:
         tools = await extract_tool_definitions(session)
         call_tool_fn = await build_mcp_tool_caller(session)
 
-        result = await run_agent_turn(
+        result = await retry_decorator(run_agent_turn)(
+            aoai_client=aoai_client,
+            tools=tools,
+            call_tool_fn=call_tool_fn,
+            user_message=user_message,
+        )
+
+        tool_call_names = [t.name for t in result.tool_calls]
+        assert "list_azure_ai_foundry_labs_projects" in tool_call_names
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_mcp_client_message_20(aoai_client) -> None:
+    """test"""
+    user_message = "I want to prototype an app with Azure AI Foundry Labs. Where do I start?"
+    async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
+        tools = await extract_tool_definitions(session)
+        call_tool_fn = await build_mcp_tool_caller(session)
+
+        result = await retry_decorator(run_agent_turn)(
+            aoai_client=aoai_client,
+            tools=tools,
+            call_tool_fn=call_tool_fn,
+            user_message=user_message,
+        )
+
+        tool_call_names = [t.name for t in result.tool_calls]
+        assert "get_prototyping_instructions_for_github_and_labs" in tool_call_names
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_mcp_client_message_30(aoai_client) -> None:
+    """test"""
+    user_message = "I want to use the Aurora model from Azure AI Foundry Labs; fetch details on how to implement it."
+    async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
+        tools = await extract_tool_definitions(session)
+        call_tool_fn = await build_mcp_tool_caller(session)
+
+        result = await retry_decorator(run_agent_turn)(
             aoai_client=aoai_client,
             tools=tools,
             call_tool_fn=call_tool_fn,
