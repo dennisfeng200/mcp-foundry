@@ -65,7 +65,7 @@ async def test_mcp_client_lists_tools_using_pipx():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_mcp_client_message_1(aoai_client) -> None:
-    """test"""
+    """Test tool usage for a user message asking about foundry labs projects."""
     user_message = "What are the projects in Azure AI Foundry Labs?"
     async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
         tools = await extract_tool_definitions(session)
@@ -85,7 +85,7 @@ async def test_mcp_client_message_1(aoai_client) -> None:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_mcp_client_message_2(aoai_client) -> None:
-    """test"""
+    """Test tool usage for a user message asking about prototyping with foundry labs projects."""
     user_message = "I want to prototype an app with Azure AI Foundry Labs. Where do I start?"
     async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
         tools = await extract_tool_definitions(session)
@@ -105,7 +105,11 @@ async def test_mcp_client_message_2(aoai_client) -> None:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_mcp_client_message_3(aoai_client) -> None:
-    """test"""
+    """
+    Test tool usage for a user message asking code/implementation details.
+    Because of stochasticity of response (sometimes uses the prototyping tool or list-projects
+    tool instead of intended code-samples tool), we do n repeated trials.
+    """
     user_message = "Give me code and implementation details for the Aurora model."
     n_trials = 5
     async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
