@@ -2631,8 +2631,6 @@ dependencies = [
     { name = "jinja2" },
     { name = "mcp" },
     { name = "requests" },
-    { name = "tool-usage-evals" },
-    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -2640,6 +2638,8 @@ test = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "tenacity" },
+    { name = "tool-usage-evals" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -2651,10 +2651,8 @@ requires-dist = [
     { name = "azure-mgmt-cognitiveservices", specifier = ">=13.0.0" },
     { name = "azure-search-documents", specifier = ">=11.5.2" },
     { name = "jinja2", specifier = "~=3.0" },
-    { name = "mcp", specifier = ">=1.9.1" },
+    { name = "mcp", specifier = ">=1.8.0" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "tool-usage-evals", specifier = ">=0.1.1" },
-    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -2662,6 +2660,8 @@ test = [
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "tenacity", specifier = ">=9.1.2" },
+    { name = "tool-usage-evals", specifier = ">=0.1.4" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [[package]]
@@ -4311,7 +4311,7 @@ wheels = [
 
 [[package]]
 name = "tool-usage-evals"
-version = "0.1.1"
+version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-identity" },
@@ -4319,10 +4319,11 @@ dependencies = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/ba/150dfce6eaa2a1167f366fbc91b95ed05f68f3a972e83207b38c3dc81dcc/tool_usage_evals-0.1.1.tar.gz", hash = "sha256:8a666b8252623d9014b3d4f304b7ed512a7a8bf1e4fee22a921c565f799871dd", size = 48669, upload-time = "2025-05-29T01:00:48.58Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/5c/57e6940cbb191a982dee71863c125aad943a84b4f30d4ce08a522642f764/tool_usage_evals-0.1.4.tar.gz", hash = "sha256:7abbeb257183a8fbe818b7f0e793a5afe669ff96e2dfc3ae28f87a4ae41b8731", size = 49210, upload-time = "2025-05-30T00:49:51.715Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/e6/bb7678b08c0d45f78ef9323de2757180dfb11d8eb091690067d6fba100b1/tool_usage_evals-0.1.1-py3-none-any.whl", hash = "sha256:bf1fa5010bc1797e807064e096346d82042ba6a9d0110e81c0a160f5404b508f", size = 5414, upload-time = "2025-05-29T01:00:46.803Z" },
+    { url = "https://files.pythonhosted.org/packages/09/73/298e98da166fbd16820affbed4c213bc22af77fd2e68df3381add4f186db/tool_usage_evals-0.1.4-py3-none-any.whl", hash = "sha256:732b167927697bf19bb924c2341f27056e591ad6496023b288884e8081d11ce1", size = 5578, upload-time = "2025-05-30T00:49:50.49Z" },
 ]
 
 [[package]]

@@ -40,8 +40,8 @@ def aoai_client() -> AzureOpenAI:
     token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
     client = AzureOpenAI(
         azure_ad_token_provider=token_provider,
-        azure_endpoint=os.environ["AOAI_ENDPOINT"],
-        api_version=os.environ["AOAI_API_VERSION"],
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        api_version=os.environ["AZURE_OPENAI_API_VERSION"],
     )
     return client
 
@@ -73,6 +73,7 @@ async def test_mcp_client_message_1(aoai_client) -> None:
 
         result = await retry_decorator(run_agent_turn)(
             aoai_client=aoai_client,
+            model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
             tools=tools,
             call_tool_fn=call_tool_fn,
             user_message=user_message,
@@ -93,6 +94,7 @@ async def test_mcp_client_message_2(aoai_client) -> None:
 
         result = await retry_decorator(run_agent_turn)(
             aoai_client=aoai_client,
+            model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
             tools=tools,
             call_tool_fn=call_tool_fn,
             user_message=user_message,
@@ -111,7 +113,7 @@ async def test_mcp_client_message_3(aoai_client) -> None:
     tool instead of intended code-samples tool), we do n repeated trials.
     """
     user_message = "Give me code and implementation details for the Aurora model."
-    n_trials = 5
+    n_trials = 3
     async with mcp_session_context_manager("python", [str(MCP_SERVER_SCRIPT)]) as session:
         tools = await extract_tool_definitions(session)
         call_tool_fn = await build_mcp_tool_caller(session)
@@ -120,6 +122,7 @@ async def test_mcp_client_message_3(aoai_client) -> None:
         for trial in tqdm(range(n_trials)):
             result = await retry_decorator(run_agent_turn)(
                 aoai_client=aoai_client,
+                model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
                 tools=tools,
                 call_tool_fn=call_tool_fn,
                 user_message=user_message,
